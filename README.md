@@ -37,7 +37,7 @@ Without it, the scripts fall back to pandas + SQLite.
 **Claude Code**
 
 ```bash
-git clone https://github.com/<you>/large-file-analysis ~/.claude/skills/large-file-analysis
+git clone https://github.com/adelguerrot-svg/large-file-analysis ~/.claude/skills/large-file-analysis
 pip install pandas duckdb openpyxl   # duckdb recommended, openpyxl for Excel
 ```
 
