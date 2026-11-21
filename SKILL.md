@@ -20,6 +20,10 @@ and read back only the small result.
 
 ## Workflow
 
+The scripts live in this skill's own `scripts/` folder (usually
+`~/.claude/skills/large-file-analysis/scripts/`), not in the user's project. Call them with that
+full path; `scripts/...` below is shorthand.
+
 ### 1. Profile the folder (once)
 
 ```bash
