@@ -1,36 +1,40 @@
 # large-file-analysis: a Claude skill for big data files
 
-Analyze large CSV, Excel, Parquet and JSON files with Claude **without loading them into
-context**. Claude reads only the headers and a few sample rows, then answers your questions
-with SQL and reads back only the small results.
+A Claude skill that makes analysis of large CSV, Excel, Parquet and JSON files fast.
+Claude first profiles each file (columns, types, null rates, a few sample rows), then answers
+your questions with SQL and reads back only small, aggregated results.
 
-Fewer tokens, fewer hit limits, and it works on files far bigger than Claude's context window.
+## What it does
 
-## Why
+- **Never opens raw data files.** The skill forbids Claude from printing or reading a data file
+  directly, so a big file can't flood the context by accident.
+- **Profiles first.** `scripts/profile.py` prints each file's size, row count, columns, types,
+  null rates and 5 sample rows.
+- **Answers with SQL.** `scripts/query.py` runs SQL on your files (each file is a table),
+  prints at most 50 rows, and can save the full result to a CSV.
+- **Works on several files at once.** Point it at a folder and join files in one query.
 
-When you point Claude at a folder of data files, it often opens them to "take a look".
-On big files, that burns your usage in seconds, or simply fails.
+The engine is [DuckDB](https://duckdb.org) when installed (streams multi-GB files). Without it,
+the scripts fall back to pandas + SQLite, which is fine up to a few million rows.
 
-Benchmark on a 1,000,000-row orders CSV (52 MB):
+## What to expect
 
-| | Approx. tokens read by Claude |
-|---|---|
-| Reading the file | ~13,600,000 (doesn't fit in context) |
-| With this skill: profile of the file | ~250 |
-| With this skill: one aggregated query (revenue by country and channel, 20 rows) | ~230 |
+We ran the same analysis with and without the skill, on a Windows machine, in two tests with
+different sets of files (1.4 to several million rows, up to 600 MB of CSV: joins, data-quality
+checks, aggregations).
 
-Token counts are estimated at 4 characters per token.
+| | Without the skill | With the skill | Speedup |
+|---|---|---|---|
+| Test 1 (4 files, about 1.4M rows) | about 3.5 min | 65 s | about 3x |
+| Test 2 (larger files, several million rows) | 2 min 19 s | 40 s | about 3.5x |
 
-## How it works
+**The gain is speed, not tokens.** In every run Claude kept the raw files out of its context, so
+token usage was about the same (roughly 18k to 25k tokens of messages with or without the
+skill). Without the skill, Claude fell back on slower tools such as line-by-line reads in
+PowerShell or Python's csv module; with it, queries run on DuckDB.
 
-1. **Profile**: `scripts/profile.py` prints each file's size, row count, columns, types,
-   null rates and 5 sample rows.
-2. **Query**: `scripts/query.py` runs SQL on the files (each file is a table) and prints at most
-   50 rows. Full results can be saved to a CSV.
-3. **Rules**: the skill forbids Claude from opening raw data files directly.
-
-The engine is [DuckDB](https://duckdb.org) when installed (streams multi-GB files in seconds).
-Without it, the scripts fall back to pandas + SQLite.
+These are single runs on one machine, so treat the numbers as indicative. The gap will be
+smaller if Python or DuckDB is already available and Claude chooses to use it.
 
 ## Install
 
@@ -38,11 +42,10 @@ Without it, the scripts fall back to pandas + SQLite.
 
 ```bash
 git clone https://github.com/adelguerrot-svg/large-file-analysis ~/.claude/skills/large-file-analysis
-pip install pandas duckdb openpyxl   # duckdb recommended, openpyxl for Excel
+pip install pandas openpyxl duckdb   # duckdb recommended, openpyxl for Excel files
 ```
 
-**Claude app (claude.ai / desktop)**: zip the folder and upload it in
-the Skills section of Settings.
+**Claude app**: zip the folder and upload it in the Skills section of Settings.
 
 ## Usage
 
